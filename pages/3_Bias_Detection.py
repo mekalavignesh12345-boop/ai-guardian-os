@@ -40,24 +40,17 @@ def load_dataset(uploaded_file):
     if suffix == "json":
         return pd.read_json(uploaded_file)
     raise ValueError("Unsupported file type. Upload CSV, Excel, or JSON.")
+# ----------------------------------------------------
+# Load Dataset from Upload Page
+# ----------------------------------------------------
 
-
-uploaded_file = st.file_uploader(
-    "Upload dataset",
-    type=["csv", "xlsx", "xls", "json"],
-    help="The dataset must include a binary target column and a protected attribute.",
-)
-
-if uploaded_file is None:
-    st.info("Please upload a dataset to run bias detection.")
+if "dataset" not in st.session_state:
+    st.error("❌ Please upload a dataset first from the Upload Dataset page.")
     st.stop()
 
-try:
-    df = load_dataset(uploaded_file)
-except Exception as error:
-    st.error(f"Unable to load dataset: {error}")
-    st.stop()
+df = st.session_state["dataset"]
 
+st.success("✅ Dataset loaded successfully.")
 if df.empty:
     st.error("Uploaded dataset is empty.")
     st.stop()
@@ -139,6 +132,10 @@ with st.spinner("Training model and computing fairness metrics..."):
     )
 
 fairness_score = max(0, round((1 - abs(dp_difference)) * 100, 2))
+st.session_state["fairness_score"] = fairness_score
+st.session_state["dp_difference"] = dp_difference
+st.session_state["dp_ratio"] = dp_ratio
+st.session_state["eo_difference"] = eo_difference
 
 st.divider()
 
@@ -154,12 +151,17 @@ st.divider()
 if fairness_score >= 90:
     risk = "LOW"
     color = "green"
+
 elif fairness_score >= 75:
     risk = "MEDIUM"
     color = "orange"
+
 else:
     risk = "HIGH"
     color = "red"
+
+# Save risk
+st.session_state["bias_risk"] = risk
 
 st.subheader("Bias Risk Assessment")
 st.markdown(f"### Risk Level: <span style='color:{color}'>{risk}</span>", unsafe_allow_html=True)
@@ -205,3 +207,19 @@ summary = pd.DataFrame(
 
 st.subheader("Metric Summary")
 st.dataframe(summary, use_container_width=True, hide_index=True)
+st.divider()
+
+st.subheader("✅ Fairness Audit Status")
+
+col1, col2 = st.columns(2)
+
+col1.metric("Fairness Score", f"{fairness_score}%")
+col2.metric("Risk Level", risk)
+
+if fairness_score >= 90:
+    st.success("Dataset Passed Fairness Audit")
+elif fairness_score >= 75:
+    st.warning("Dataset Passed with Medium Risk")
+else:
+    st.error("Dataset Failed Fairness Audit")
+
