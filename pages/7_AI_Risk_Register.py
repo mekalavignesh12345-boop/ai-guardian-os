@@ -36,91 +36,39 @@ conn = get_connection()
 
 cursor = conn.cursor()
 
+
 # ----------------------------------------------------
-# Create Table
+# Current Project
 # ----------------------------------------------------
 
-cursor.execute("""
-
-CREATE TABLE IF NOT EXISTS risk_register(
-
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-project_id INTEGER,
-
-risk_name TEXT,
-
-category TEXT,
-
-severity TEXT,
-
-likelihood TEXT,
-
-owner TEXT,
-
-status TEXT,
-
-mitigation TEXT,
-
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
+project = st.session_state.get(
+    "project_name",
+    "Current Project"
 )
 
-""")
-
-conn.commit()
-
-# ----------------------------------------------------
-# Load Projects
-# ----------------------------------------------------
-
-cursor.execute("""
-
-SELECT id,name
-
-FROM projects
-
-ORDER BY created_at DESC
-
-""")
-
-projects = cursor.fetchall()
-
-if len(projects)==0:
-
-    st.warning(
-
-        "Create a project first."
-
-    )
-
-    conn.close()
-
-    st.stop()
-
-project_map={
-
-    p["name"]:p["id"]
-
-    for p in projects
-
-}
-
+project_id = st.session_state.get(
+    "project_id",
+    1
+)
 # ----------------------------------------------------
 # Risk Form
 # ----------------------------------------------------
 
 st.header("Create Risk")
 
-project=st.selectbox(
+# ----------------------------------------------------
+# Current Project
+# ----------------------------------------------------
 
-    "Project",
-
-    list(project_map.keys())
-
+project = st.session_state.get(
+    "project_name",
+    "Current Project"
 )
 
-project_id=project_map[project]
+project_id = st.session_state.get(
+    "project_id",
+    1
+)
 
 risk_name=st.text_input(
 
@@ -224,15 +172,20 @@ import plotly.express as px
 # ----------------------------------------------------
 # Risk Dashboard
 # ----------------------------------------------------
+cursor.execute("""
+SELECT *
+FROM risk_register
+""")
 
-st.header("📊 Risk Dashboard")
+rows = cursor.fetchall()
 
-if len(risk_df) == 0:
+risk_df = pd.DataFrame(rows)
 
-    st.info("No risks available for analysis.")
+if risk_df.empty:
+
+    st.info("No risks available.")
 
     st.stop()
-
 # ----------------------------------------------------
 # Risk Score Mapping
 # ----------------------------------------------------
