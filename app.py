@@ -141,3 +141,6 @@ Select a page from the sidebar
 to begin your Responsible AI workflow.
 """
 )
+from components.guardian_chatbot import guardian_chat
+
+guardian_chat()
