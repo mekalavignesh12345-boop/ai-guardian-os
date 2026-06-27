@@ -28,143 +28,32 @@ st.caption(
 )
 
 st.divider()
-
 # -----------------------------------------------------
-# Database
-# -----------------------------------------------------
-
-conn = get_connection()
-
-cursor = conn.cursor()
-
-# -----------------------------------------------------
-# Load Projects
+# Load Analysis Results
 # -----------------------------------------------------
 
-cursor.execute("""
-
-SELECT
-
-id,
-
-name,
-
-owner,
-
-compliance,
-
-created_at
-
-FROM projects
-
-ORDER BY created_at DESC
-
-""")
-
-projects = cursor.fetchall()
-
-if len(projects) == 0:
-
-    st.warning(
-
-        "No projects available."
-
-    )
-
+if "dataset" not in st.session_state:
+    st.error("❌ Please upload a dataset first.")
     st.stop()
 
-project_map = {
+df = st.session_state["dataset"]
 
-    f"{row['id']} - {row['name']}": row["id"]
+fairness = st.session_state.get("fairness_score", 0)
+privacy = st.session_state.get("privacy_score", 0)
+explainability = st.session_state.get("explainability_score", 0)
+accuracy = st.session_state.get("model_accuracy", 0)
 
-    for row in projects
-
+dataset = {
+    "rows": len(df),
+    "columns": len(df.columns),
+    "filename": "Uploaded Dataset"
 }
 
-selected = st.selectbox(
+project_id = "Current Session"
 
-    "Project",
-
-    list(project_map.keys())
-
-)
-
-project_id = project_map[selected]
+st.success("✅ Analysis results loaded successfully.")
 
 st.divider()
-
-# -----------------------------------------------------
-# Load Model
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM models
-
-WHERE project_id=?
-
-ORDER BY id DESC
-
-LIMIT 1
-
-""",(project_id,))
-
-model = cursor.fetchone()
-
-if model is None:
-
-    st.error(
-
-        "No model analysis available."
-
-    )
-
-    st.stop()
-
-# -----------------------------------------------------
-# Load Dataset
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM datasets
-
-WHERE project_id=?
-
-ORDER BY id DESC
-
-LIMIT 1
-
-""",(project_id,))
-
-dataset = cursor.fetchone()
-
-# -----------------------------------------------------
-# Load Certificate
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM certificates
-
-WHERE project_id=?
-
-ORDER BY id DESC
-
-LIMIT 1
-
-""",(project_id,))
-
-certificate = cursor.fetchone()
-
-conn.close()
-
 # -----------------------------------------------------
 # Compliance Dashboard
 # -----------------------------------------------------
@@ -195,6 +84,11 @@ overall = round(
     2
 
 )
+# -----------------------------------------------------
+# Save Compliance Results
+# -----------------------------------------------------
+
+st.session_state["compliance_score"] = overall
 # Save Compliance Results
 st.session_state["compliance_score"] = overall
 st.session_state["risk_level"] = risk_level if "risk_level" in locals() else "LOW"
@@ -274,7 +168,7 @@ st.info(summary)
 st.success("✅ Compliance analysis completed.")
 
 st.divider()
-
+st.session_state["risk_level"] = risk_level
 # -----------------------------------------------------
 # Dataset Information
 # -----------------------------------------------------
@@ -402,6 +296,11 @@ checks = {
 }
 
 for item, passed in checks.items():
+    passed = sum(checks.values())
+failed = len(checks) - passed
+
+st.session_state["policy_passed"] = passed
+st.session_state["policy_failed"] = failed
 
     if passed:
 
@@ -518,6 +417,7 @@ if not recommendations:
         "All Responsible AI checks meet the recommended threshold."
 
     )
+    st.session_state["recommendation_count"] = len(recommendations)
 
 else:
 
@@ -532,7 +432,25 @@ st.divider()
 # -----------------------------------------------------
 
 st.header("Deployment Readiness")
+if overall >= 90:
 
+    deployment = "Approved"
+
+    st.success("🟢 Ready for production deployment.")
+
+elif overall >= 75:
+
+    deployment = "Conditional"
+
+    st.warning("🟡 Ready with recommended improvements.")
+
+else:
+
+    deployment = "Rejected"
+
+    st.error("🔴 Not recommended for production.")
+
+st.session_state["deployment_status"] = deployment
 if overall >= 90:
 
     st.success(
@@ -842,77 +760,7 @@ if generate:
 
     doc.build(elements)
 
-    conn = get_connection()
-
-    cursor = conn.cursor()
-
-    cursor.execute(
-
-        """
-
-        INSERT INTO reports(
-
-            project_id,
-
-            report_name,
-
-            report_type
-
-        )
-
-        VALUES(?,?,?)
-
-        """,
-
-        (
-
-            project_id,
-
-            report_name,
-
-            "Compliance"
-
-        )
-
-    )
-
-    cursor.execute(
-
-        """
-
-        INSERT INTO certificates(
-
-            project_id,
-
-            certificate_id,
-
-            score,
-
-            status
-
-        )
-
-        VALUES(?,?,?,?)
-
-        """,
-
-        (
-
-            project_id,
-
-            certificate_id,
-
-            overall,
-
-            "Issued"
-
-        )
-
-    )
-
-    conn.commit()
-
-    conn.close()
+    
 
     log(
 
