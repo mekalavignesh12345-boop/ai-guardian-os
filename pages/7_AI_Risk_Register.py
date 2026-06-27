@@ -38,19 +38,6 @@ cursor = conn.cursor()
 
 
 # ----------------------------------------------------
-# Current Project
-# ----------------------------------------------------
-
-project = st.session_state.get(
-    "project_name",
-    "Current Project"
-)
-
-project_id = st.session_state.get(
-    "project_id",
-    1
-)
-# ----------------------------------------------------
 # Risk Form
 # ----------------------------------------------------
 
@@ -166,6 +153,44 @@ mitigation=st.text_area(
 
     "Mitigation Plan"
 )
+if st.button("➕ Add Risk", type="primary"):
+
+    if risk_name.strip() == "":
+        st.error("Please enter a Risk Name.")
+
+    else:
+
+        cursor.execute(
+            """
+            INSERT INTO risk_register(
+                project_id,
+                risk_name,
+                category,
+                severity,
+                likelihood,
+                owner,
+                status,
+                mitigation
+            )
+            VALUES(?,?,?,?,?,?,?,?)
+            """,
+            (
+                project_id,
+                risk_name,
+                category,
+                severity,
+                likelihood,
+                owner,
+                status,
+                mitigation
+            )
+        )
+
+        conn.commit()
+
+        st.success("Risk added successfully.")
+
+        st.rerun()
 import io
 import plotly.express as px
 
@@ -173,14 +198,35 @@ import plotly.express as px
 # Risk Dashboard
 # ----------------------------------------------------
 cursor.execute("""
-SELECT *
+SELECT
+risk_name,
+category,
+severity,
+likelihood,
+owner,
+status,
+mitigation
 FROM risk_register
+ORDER BY created_at DESC
 """)
 
 rows = cursor.fetchall()
 
-risk_df = pd.DataFrame(rows)
+risk_df = pd.DataFrame(
 
+    rows,
+
+    columns=[
+        "Risk",
+        "Category",
+        "Severity",
+        "Likelihood",
+        "Owner",
+        "Status",
+        "Mitigation"
+    ]
+
+)
 if risk_df.empty:
 
     st.info("No risks available.")
