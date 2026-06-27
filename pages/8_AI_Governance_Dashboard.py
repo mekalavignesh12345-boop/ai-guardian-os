@@ -123,96 +123,17 @@ st.divider()
 
 st.header("Compliance Overview")
 
-if models_df.empty:
+if (
+    avg_fairness == 0
+    and avg_privacy == 0
+    and avg_explainability == 0
+):
 
     st.info("No model analysis available.")
 
 else:
 
-    compliance_df = pd.DataFrame({
-
-        "Metric":[
-
-            "Fairness",
-
-            "Privacy",
-
-            "Explainability"
-
-        ],
-
-        "Average Score":[
-
-            avg_fairness,
-
-            avg_privacy,
-
-            avg_explainability
-
-        ]
-
-    })
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-
-        fig = px.bar(
-
-            compliance_df,
-
-            x="Metric",
-
-            y="Average Score",
-
-            text="Average Score",
-
-            color="Metric",
-
-            title="Average Responsible AI Scores"
-
-        )
-
-        fig.update_layout(
-
-            height=450,
-
-            showlegend=False
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True
-
-        )
-
-    with c2:
-
-        fig = px.pie(
-
-            compliance_df,
-
-            names="Metric",
-
-            values="Average Score",
-
-            title="Compliance Distribution"
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True
-
-        )
-
-st.divider()
-
+   
 # -----------------------------------------------------
 # Project Comparison
 # -----------------------------------------------------
@@ -224,7 +145,45 @@ if models_df.empty:
     st.info("No projects available.")
 
 else:
+compliance_df = pd.DataFrame({
 
+    "Metric": [
+        "Fairness",
+        "Privacy",
+        "Explainability"
+    ],
+
+    "Average Score": [
+        avg_fairness,
+        avg_privacy,
+        avg_explainability
+    ]
+
+})
+
+c1, c2 = st.columns(2)
+
+with c1:
+
+    fig = px.bar(
+        compliance_df,
+        x="Metric",
+        y="Average Score",
+        text="Average Score",
+        color="Metric"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+with c2:
+
+    fig = px.pie(
+        compliance_df,
+        names="Metric",
+        values="Average Score"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
     comparison = models_df[[
 
         "project_id",
