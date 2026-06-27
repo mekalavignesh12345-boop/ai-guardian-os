@@ -2,374 +2,222 @@ import io
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
-from database.database import get_connection
-
-# -----------------------------------------------------
-# Page Configuration
-# -----------------------------------------------------
+# ==========================================================
+# PAGE CONFIG
+# ==========================================================
 
 st.set_page_config(
-
     page_title="AI Governance Dashboard",
-
     page_icon="🏛️",
-
     layout="wide"
-
 )
 
 st.title("🏛️ AI Governance Dashboard")
-
-st.caption(
-
-    "Enterprise Responsible AI Governance Overview"
-
-)
+st.caption("Enterprise Responsible AI Governance Overview")
 
 st.divider()
 
-# -----------------------------------------------------
-# Database Connection
-# -----------------------------------------------------
+# ==========================================================
+# SESSION VALIDATION
+# ==========================================================
 
 if "dataset" not in st.session_state:
-    st.error("Please upload a dataset first.")
+    st.error("❌ Please upload a dataset first.")
     st.stop()
 
-projects_count = 1
-models_count = 1
-certificates_count = 1
+df = st.session_state["dataset"]
 
-avg_fairness = st.session_state.get("fairness_score", 0)
-avg_privacy = st.session_state.get("privacy_score", 0)
-avg_explainability = st.session_state.get("explainability_score", 0)
+# ==========================================================
+# LOAD SESSION SCORES
+# ==========================================================
 
-# -----------------------------------------------------
-# KPI Cards
-# -----------------------------------------------------
+fairness = float(st.session_state.get("fairness_score", 0))
+privacy = float(st.session_state.get("privacy_score", 0))
+bias = float(st.session_state.get("bias_score", 0))
+security = float(st.session_state.get("security_score", 0))
+robustness = float(st.session_state.get("robustness_score", 0))
+explainability = float(st.session_state.get("explainability_score", 0))
+compliance = float(st.session_state.get("compliance_score", 0))
+accuracy = float(st.session_state.get("model_accuracy", 0))
+
+project_name = st.session_state.get(
+    "project_name",
+    "Current Project"
+)
+
+top_feature = st.session_state.get(
+    "top_feature",
+    "Not Available"
+)
+
+# ==========================================================
+# GOVERNANCE SCORE
+# ==========================================================
+
+scores = [
+    fairness,
+    privacy,
+    bias,
+    security,
+    robustness,
+    explainability,
+    compliance,
+]
+
+overall = round(sum(scores) / len(scores), 2)
+
+st.session_state["governance_score"] = overall
+
+# ==========================================================
+# ORGANIZATION OVERVIEW
+# ==========================================================
 
 st.header("Organization Overview")
 
-projects_count = 1
-models_count = 1
-certificates_count = 1
+c1, c2, c3, c4 = st.columns(4)
 
-avg_fairness = st.session_state.get("fairness_score", 0)
-avg_privacy = st.session_state.get("privacy_score", 0)
-avg_explainability = st.session_state.get("explainability_score", 0)
-overall_score = round(
-    
-
-    (
-
-        avg_fairness +
-
-        avg_privacy +
-
-        avg_explainability
-
-    ) / 3,
-
-    2
-
-)
-st.session_state["governance_score"] = overall_score
-
-k1, k2, k3, k4 = st.columns(4)
-
-k1.metric(
-
-    "Projects",
-
-    projects_count
-
+c1.metric(
+    "Project",
+    project_name
 )
 
-k2.metric(
-
-    "Models",
-
-    models_count
-
+c2.metric(
+    "Dataset Rows",
+    len(df)
 )
 
-k3.metric(
-
-    "Certificates",
-
-    certificates_count
-
+c3.metric(
+    "Dataset Columns",
+    len(df.columns)
 )
 
-k4.metric(
-
-    "Compliance",
-
-    f"{overall_score}%"
-
+c4.metric(
+    "Governance Score",
+    f"{overall}%"
 )
 
-st.progress(
-
-    overall_score / 100
-
-)
+st.progress(overall / 100)
 
 st.divider()
-# -----------------------------------------------------
-# Compliance Overview
-# -----------------------------------------------------
 
-st.header("Compliance Overview")
+# ==========================================================
+# RESPONSIBLE AI METRICS
+# ==========================================================
 
-if (
-    avg_fairness == 0
-    and avg_privacy == 0
-    and avg_explainability == 0
-):
+st.header("Responsible AI Metrics")
 
-    st.info("No model analysis available.")
-
-else:
-
-   
-# -----------------------------------------------------
-# Project Comparison
-# -----------------------------------------------------
-
-st.header("Project Comparison")
-
-if models_df.empty:
-
-    st.info("No projects available.")
-
-else:
-compliance_df = pd.DataFrame({
+metric_df = pd.DataFrame({
 
     "Metric": [
+
         "Fairness",
+
         "Privacy",
-        "Explainability"
+
+        "Bias",
+
+        "Security",
+
+        "Robustness",
+
+        "Explainability",
+
+        "Compliance"
+
     ],
 
-    "Average Score": [
-        avg_fairness,
-        avg_privacy,
-        avg_explainability
+    "Score": [
+
+        fairness,
+
+        privacy,
+
+        bias,
+
+        security,
+
+        robustness,
+
+        explainability,
+
+        compliance
+
     ]
 
 })
 
-c1, c2 = st.columns(2)
+st.dataframe(
+    metric_df,
+    use_container_width=True,
+    hide_index=True
+)
 
-with c1:
+fig = px.bar(
+    metric_df,
+    x="Metric",
+    y="Score",
+    color="Metric",
+    text="Score",
+    title="Responsible AI Metrics"
+)
 
-    fig = px.bar(
-        compliance_df,
-        x="Metric",
-        y="Average Score",
-        text="Average Score",
-        color="Metric"
-    )
+fig.update_layout(
+    height=450,
+    showlegend=False
+)
 
-    st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
 
-with c2:
+st.divider()
 
-    fig = px.pie(
-        compliance_df,
+# ==========================================================
+# COMPLIANCE OVERVIEW
+# ==========================================================
+
+st.header("Compliance Overview")
+
+left, right = st.columns(2)
+
+with left:
+
+    pie = px.pie(
+        metric_df,
         names="Metric",
-        values="Average Score"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-    comparison = models_df[[
-
-        "project_id",
-
-        "fairness",
-
-        "privacy",
-
-        "explainability"
-
-    ]].fillna(0)
-
-    st.dataframe(
-
-        comparison,
-
-        use_container_width=True,
-
-        hide_index=True
-
-    )
-
-    fig = px.bar(
-
-        comparison,
-
-        x="project_id",
-
-        y=[
-
-            "fairness",
-
-            "privacy",
-
-            "explainability"
-
-        ],
-
-        barmode="group",
-
-        title="Project Responsible AI Scores"
-
+        values="Score",
+        title="Governance Distribution"
     )
 
     st.plotly_chart(
-
-        fig,
-
+        pie,
         use_container_width=True
-
     )
 
-st.divider()
-
-# -----------------------------------------------------
-# Risk Distribution
-# -----------------------------------------------------
-
-st.header("Risk Distribution")
-
-if not models_df.empty:
-
-    risk_levels = []
-
-    for _, row in models_df.iterrows():
-
-        score = (
-
-            row["fairness"] +
-
-            row["privacy"] +
-
-            row["explainability"]
-
-        ) / 3
-
-        if score >= 90:
-
-            risk_levels.append("Low")
-
-        elif score >= 75:
-
-            risk_levels.append("Medium")
-
-        else:
-
-            risk_levels.append("High")
-
-    risk_df = pd.DataFrame({
-
-        "Risk": risk_levels
-
-    })
-
-    risk_summary = (
-
-        risk_df
-
-        .groupby("Risk")
-
-        .size()
-
-        .reset_index(name="Projects")
-
-    )
-
-    fig = px.pie(
-
-        risk_summary,
-
-        names="Risk",
-
-        values="Projects",
-
-        title="Project Risk Levels"
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True
-
-    )
-
-st.divider()
-
-# -----------------------------------------------------
-# Certificate Statistics
-# -----------------------------------------------------
-
-st.header("Certificates")
-
-if certificates_df.empty:
-
-    st.info("No certificates issued.")
-
-else:
+with right:
 
     st.metric(
-
-        "Certificates Issued",
-
-        len(certificates_df)
-
+        "Model Accuracy",
+        f"{accuracy:.2f}%"
     )
 
-    st.dataframe(
+    st.metric(
+        "Top Feature",
+        top_feature
+    )
 
-        certificates_df,
-
-        use_container_width=True,
-
-        hide_index=True
-
+    st.metric(
+        "Compliance",
+        f"{compliance:.2f}%"
     )
 
 st.divider()
-
-# -----------------------------------------------------
-# Recent Audit Logs
-# -----------------------------------------------------
-
-st.header("Recent Audit Activity")
-
-if logs_df.empty:
-
-    st.info("No audit logs available.")
-
-else:
-
-    st.dataframe(
-
-        logs_df,
-
-        use_container_width=True,
-
-        hide_index=True
-
-    )
-
-st.divider()
-# -----------------------------------------------------
-# Executive Scorecard
-# -----------------------------------------------------
+# ==========================================================
+# EXECUTIVE SCORECARD
+# ==========================================================
 
 st.header("Executive Scorecard")
 
@@ -377,37 +225,45 @@ scorecard = pd.DataFrame({
 
     "Metric":[
 
-        "Projects",
+        "Fairness",
 
-        "Models",
+        "Privacy",
 
-        "Certificates",
+        "Bias",
 
-        "Average Fairness",
+        "Security",
 
-        "Average Privacy",
+        "Robustness",
 
-        "Average Explainability",
+        "Explainability",
 
-        "Overall Compliance"
+        "Compliance",
+
+        "Model Accuracy",
+
+        "Overall Governance"
 
     ],
 
-    "Value":[
+    "Score":[
 
-        projects_count,
+        fairness,
 
-        models_count,
+        privacy,
 
-        certificates_count,
+        bias,
 
-        avg_fairness,
+        security,
 
-        avg_privacy,
+        robustness,
 
-        avg_explainability,
+        explainability,
 
-        overall_score
+        compliance,
+
+        accuracy,
+
+        overall
 
     ]
 
@@ -425,157 +281,329 @@ st.dataframe(
 
 st.divider()
 
-# -----------------------------------------------------
-# Governance Status
-# -----------------------------------------------------
+# ==========================================================
+# GOVERNANCE STATUS
+# ==========================================================
 
 st.header("Governance Status")
 
-if overall_score >= 90:
+if overall >= 90:
 
     status = "Excellent"
 
-    st.success(
+    risk = "Low"
 
-        "🟢 Enterprise AI Governance is operating within recommended thresholds."
+    st.success("🟢 Enterprise AI Governance is Excellent")
 
-    )
-
-elif overall_score >= 75:
+elif overall >= 75:
 
     status = "Good"
 
-    st.warning(
+    risk = "Medium"
 
-        "🟡 Governance is acceptable but improvements are recommended."
-
-    )
+    st.warning("🟡 Governance is Good")
 
 else:
 
     status = "Needs Improvement"
 
-    st.error(
+    risk = "High"
 
-        "🔴 Governance posture requires immediate attention."
+    st.error("🔴 Governance Requires Immediate Attention")
 
-    )
+st.session_state["governance_status"] = status
 
-st.metric(
+g1, g2, g3 = st.columns(3)
 
-    "Governance Status",
+g1.metric(
+
+    "Governance Score",
+
+    f"{overall}%"
+
+)
+
+g2.metric(
+
+    "Risk Level",
+
+    risk
+
+)
+
+g3.metric(
+
+    "Status",
 
     status
 
 )
 
 st.divider()
-st.session_state["governance_status"] = status
 
-# -----------------------------------------------------
-# Governance Recommendations
-# -----------------------------------------------------
+# ==========================================================
+# GOVERNANCE RECOMMENDATIONS
+# ==========================================================
 
 st.header("Recommendations")
 
 recommendations = []
 
-if avg_fairness < 80:
+if fairness < 80:
 
     recommendations.append(
-
-        "Improve fairness by reducing demographic disparities and validating training datasets."
-
+        "Improve fairness by balancing the training dataset."
     )
 
-if avg_privacy < 80:
+if privacy < 80:
 
     recommendations.append(
-
-        "Strengthen privacy protections through anonymization and secure data handling."
-
+        "Improve privacy using anonymization."
     )
 
-if avg_explainability < 80:
+if bias < 80:
 
     recommendations.append(
-
-        "Increase model transparency by expanding explainability analysis."
-
+        "Reduce algorithmic bias."
     )
 
-if overall_score < 90:
+if security < 80:
 
     recommendations.append(
-
-        "Schedule periodic Responsible AI reviews for all active projects."
-
+        "Improve AI security controls."
     )
 
-if recommendations:
+if robustness < 80:
+
+    recommendations.append(
+        "Increase robustness testing."
+    )
+
+if explainability < 80:
+
+    recommendations.append(
+        "Improve explainability with SHAP/LIME."
+    )
+
+if compliance < 80:
+
+    recommendations.append(
+        "Increase compliance with Responsible AI policies."
+    )
+
+if not recommendations:
+
+    st.success(
+        "No governance issues detected."
+    )
+
+else:
 
     for rec in recommendations:
 
         st.warning(rec)
 
-else:
-
-    st.success(
-
-        "No major governance concerns detected."
-
-    )
-
-st.divider()
 st.session_state["governance_recommendations"] = len(recommendations)
 
-# -----------------------------------------------------
-# Search Projects
-# -----------------------------------------------------
+st.divider()
 
-st.header("Project Search")
+# ==========================================================
+# AI GOVERNANCE SUMMARY
+# ==========================================================
 
-if not projects_df.empty:
+st.header("Governance Summary")
 
-    search = st.text_input(
+summary = f"""
+Project : {project_name}
 
-        "Search by Project Name"
+Overall Governance Score : {overall:.2f}%
+
+Risk Level : {risk}
+
+Governance Status : {status}
+
+Dataset Rows : {len(df)}
+
+Dataset Columns : {len(df.columns)}
+
+Top Feature : {top_feature}
+
+Model Accuracy : {accuracy:.2f}%
+"""
+
+st.info(summary)
+
+st.divider()
+# ==========================================================
+# RISK DISTRIBUTION
+# ==========================================================
+
+st.header("Risk Distribution")
+
+risk_df = pd.DataFrame({
+
+    "Metric":[
+
+        "Fairness",
+
+        "Privacy",
+
+        "Bias",
+
+        "Security",
+
+        "Robustness",
+
+        "Explainability",
+
+        "Compliance"
+
+    ],
+
+    "Score":[
+
+        fairness,
+
+        privacy,
+
+        bias,
+
+        security,
+
+        robustness,
+
+        explainability,
+
+        compliance
+
+    ]
+
+})
+
+risk_df["Risk Level"] = risk_df["Score"].apply(
+
+    lambda x:
+    "Low" if x >= 90 else
+    "Medium" if x >= 75 else
+    "High"
+
+)
+
+pie = px.pie(
+
+    risk_df,
+
+    names="Risk Level",
+
+    title="AI Governance Risk Distribution"
+
+)
+
+st.plotly_chart(
+
+    pie,
+
+    use_container_width=True
+
+)
+
+st.divider()
+
+# ==========================================================
+# SCORE COMPARISON
+# ==========================================================
+
+st.header("Score Comparison")
+
+fig = px.line(
+
+    metric_df,
+
+    x="Metric",
+
+    y="Score",
+
+    markers=True,
+
+    title="Responsible AI Score Trend"
+
+)
+
+st.plotly_chart(
+
+    fig,
+
+    use_container_width=True
+
+)
+
+st.divider()
+
+# ==========================================================
+# PROJECT INFORMATION
+# ==========================================================
+
+st.header("Project Information")
+
+left, right = st.columns(2)
+
+with left:
+
+    st.metric(
+
+        "Project",
+
+        project_name
 
     )
 
-    filtered = projects_df.copy()
+    st.metric(
 
-    if search:
+        "Rows",
 
-        filtered = filtered[
+        len(df)
 
-            filtered["name"].astype(str).str.contains(
+    )
 
-                search,
+    st.metric(
 
-                case=False,
+        "Columns",
 
-                na=False
+        len(df.columns)
 
-            )
+    )
 
-        ]
+with right:
 
-    st.dataframe(
+    st.metric(
 
-        filtered,
+        "Top Feature",
 
-        use_container_width=True,
+        top_feature
 
-        hide_index=True
+    )
+
+    st.metric(
+
+        "Accuracy",
+
+        f"{accuracy:.2f}%"
+
+    )
+
+    st.metric(
+
+        "Governance",
+
+        f"{overall:.2f}%"
 
     )
 
 st.divider()
 
-# -----------------------------------------------------
-# Export Dashboard
-# -----------------------------------------------------
+# ==========================================================
+# EXPORT GOVERNANCE REPORT
+# ==========================================================
 
 st.header("Export Dashboard")
 
@@ -589,6 +617,16 @@ with pd.ExcelWriter(
 
 ) as writer:
 
+    metric_df.to_excel(
+
+        writer,
+
+        sheet_name="Metrics",
+
+        index=False
+
+    )
+
     scorecard.to_excel(
 
         writer,
@@ -599,53 +637,15 @@ with pd.ExcelWriter(
 
     )
 
-    if not projects_df.empty:
+    risk_df.to_excel(
 
-        projects_df.to_excel(
+        writer,
 
-            writer,
+        sheet_name="Risk Distribution",
 
-            sheet_name="Projects",
+        index=False
 
-            index=False
-
-        )
-
-    if not models_df.empty:
-
-        models_df.to_excel(
-
-            writer,
-
-            sheet_name="Models",
-
-            index=False
-
-        )
-
-    if not certificates_df.empty:
-
-        certificates_df.to_excel(
-
-            writer,
-
-            sheet_name="Certificates",
-
-            index=False
-
-        )
-
-    if not logs_df.empty:
-
-        logs_df.to_excel(
-
-            writer,
-
-            sheet_name="Audit Logs",
-
-            index=False
-
-        )
+    )
 
 st.download_button(
 
@@ -653,7 +653,7 @@ st.download_button(
 
     buffer.getvalue(),
 
-    "governance_dashboard.xlsx",
+    "AI_Governance_Dashboard.xlsx",
 
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -661,51 +661,60 @@ st.download_button(
 
 st.divider()
 
-# -----------------------------------------------------
-# Executive Summary
-# -----------------------------------------------------
+# ==========================================================
+# FINAL STATUS
+# ==========================================================
 
-st.header("Executive Summary")
+st.header("Executive Status")
 
-summary = f"""
-AI Guardian OS Governance Overview
+if overall >= 90:
 
-Projects Managed : {projects_count}
+    st.success(
+        "🟢 Enterprise AI Governance Approved"
+    )
 
-Registered Models : {models_count}
+elif overall >= 75:
 
-Certificates Issued : {certificates_count}
+    st.warning(
+        "🟡 Enterprise AI Governance Requires Minor Improvements"
+    )
 
-Average Fairness : {avg_fairness:.2f}%
+else:
 
-Average Privacy : {avg_privacy:.2f}%
+    st.error(
+        "🔴 Enterprise AI Governance Failed"
+    )
 
-Average Explainability : {avg_explainability:.2f}%
+st.success("""
 
-Overall Compliance : {overall_score:.2f}%
+AI Governance Dashboard Loaded Successfully.
 
-Governance Status : {status}
+✓ Responsible AI Monitoring
 
-The organization can use this dashboard
-to monitor Responsible AI maturity,
-identify risk areas, and support
-regulatory reporting.
-"""
+✓ Fairness Tracking
 
-st.info(summary)
+✓ Privacy Assessment
+
+✓ Explainability Monitoring
+
+✓ Compliance Tracking
+
+✓ Governance Reporting
+
+✓ Executive Analytics
+
+""")
+
+st.session_state["governance_dashboard"] = True
+st.session_state["overall_governance"] = overall
+st.session_state["executive_status"] = status
 
 st.divider()
 
-# -----------------------------------------------------
-# Footer
-# -----------------------------------------------------
+# ==========================================================
+# FOOTER
+# ==========================================================
 
-st.success(
-
-    """
-AI Governance Dashboard loaded successfully.
-
-All metrics shown are aggregated from the
-current AI Guardian OS database.
-"""
+st.caption(
+    "AI Guardian OS • Enterprise Responsible AI Governance Dashboard"
 )
