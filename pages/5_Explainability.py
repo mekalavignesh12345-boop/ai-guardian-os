@@ -45,70 +45,21 @@ st.divider()
 # Load Dataset
 # -----------------------------------------------------
 
-UPLOAD_DIR = Path("uploads")
+# -----------------------------------------------------
+# Load Dataset from Upload Page
+# -----------------------------------------------------
 
-files = sorted(
-
-    UPLOAD_DIR.glob("*")
-
-)
-
-if len(files) == 0:
-
-    st.warning(
-
-        "No uploaded datasets found."
-
-    )
-
+if "dataset" not in st.session_state:
+    st.error("❌ Please upload a dataset first from the Upload Dataset page.")
     st.stop()
 
-selected_file = st.selectbox(
+df = st.session_state["dataset"]
 
-    "Select Dataset",
-
-    files,
-
-    format_func=lambda x: x.name
-
-)
-
-suffix = selected_file.suffix.lower()
-
-try:
-
-    if suffix == ".csv":
-
-        df = pd.read_csv(selected_file)
-
-    elif suffix in [".xlsx", ".xls"]:
-
-        df = pd.read_excel(selected_file)
-
-    elif suffix == ".json":
-
-        df = pd.read_json(selected_file)
-
-    else:
-
-        st.error("Unsupported dataset.")
-
-        st.stop()
-
-except Exception as e:
-
-    st.error(e)
-
-    st.stop()
-
-st.success("Dataset loaded.")
+st.success("✅ Dataset loaded successfully.")
 
 st.dataframe(
-
     df.head(),
-
     use_container_width=True
-
 )
 
 st.divider()
@@ -306,6 +257,10 @@ transparency_score = round(
     2
 
 )
+# Save Explainability Results
+st.session_state["explainability_score"] = transparency_score
+st.session_state["model_accuracy"] = round(accuracy * 100, 2)
+st.session_state["top_feature"] = top_feature
 
 c1, c2, c3 = st.columns(3)
 
@@ -367,6 +322,7 @@ features.
 """
 
 st.info(summary)
+st.success("✅ Explainability analysis completed.")
 
 # -----------------------------------------------------
 # Save Explainability Result
@@ -541,3 +497,27 @@ documentation.
 """
 
 )
+st.divider()
+
+st.subheader("AI Explainability Status")
+
+col1, col2 = st.columns(2)
+
+col1.metric(
+    "Transparency Score",
+    f"{transparency_score}%"
+)
+
+col2.metric(
+    "Model Accuracy",
+    f"{accuracy*100:.2f}%"
+)
+
+if transparency_score >= 90:
+    st.success("✅ Model is Highly Explainable")
+
+elif transparency_score >= 75:
+    st.warning("⚠️ Model is Moderately Explainable")
+
+else:
+    st.error("❌ Model Explainability Needs Improvement")
