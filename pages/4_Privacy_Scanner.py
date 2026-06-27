@@ -34,74 +34,66 @@ st.divider()
 # Load Dataset
 # -----------------------------------------------------
 
-UPLOAD_DIR = Path("uploads")
+from pathlib import Path
 
-files = sorted(
+df = None
 
-    UPLOAD_DIR.glob("*")
+# 1. Use dataset already stored in session_state
+if "dataset" in st.session_state:
+    df = st.session_state["dataset"]
+    st.success("✅ Dataset loaded from session.")
 
-)
+# 2. Otherwise load from uploads folder
+else:
 
-if len(files) == 0:
+    upload_dir = Path("uploads")
 
-    st.warning(
+    if upload_dir.exists():
 
-        "No uploaded datasets found."
+        files = sorted(upload_dir.glob("*"))
 
-    )
+        if len(files) > 0:
 
+            selected = st.selectbox(
+                "Select Dataset",
+                files,
+                format_func=lambda x: x.name
+            )
+
+            try:
+
+                suffix = selected.suffix.lower()
+
+                if suffix == ".csv":
+                    df = pd.read_csv(selected)
+
+                elif suffix in [".xlsx", ".xls"]:
+                    df = pd.read_excel(selected)
+
+                elif suffix == ".json":
+                    df = pd.read_json(selected)
+
+                else:
+                    st.error("Unsupported file type.")
+                    st.stop()
+
+                st.session_state["dataset"] = df
+
+            except Exception as e:
+                st.error(f"Error loading dataset: {e}")
+                st.stop()
+
+# 3. No dataset available
+if df is None:
+    st.warning("⚠️ Please upload a dataset or AI Project first.")
     st.stop()
 
-selected = st.selectbox(
-
-    "Dataset",
-
-    files,
-
-    format_func=lambda x: x.name
-
-)
-
-suffix = selected.suffix.lower()
-
-try:
-
-    if suffix == ".csv":
-
-        df = pd.read_csv(selected)
-
-    elif suffix in [".xlsx", ".xls"]:
-
-        df = pd.read_excel(selected)
-
-    elif suffix == ".json":
-
-        df = pd.read_json(selected)
-
-    else:
-
-        st.error("Unsupported file.")
-
-        st.stop()
-
-except Exception as e:
-
-    st.error(e)
-
-    st.stop()
-
-st.success("Dataset loaded.")
+st.success("✅ Dataset Loaded Successfully")
 
 st.dataframe(
-
     df.head(),
-
     use_container_width=True
-
 )
-
-st.divider()
-
 # -----------------------------------------------------
 # Initialize Presidio
 # -----------------------------------------------------
