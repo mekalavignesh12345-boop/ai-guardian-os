@@ -30,7 +30,6 @@ def load_dataset(uploaded_file):
         return pd.read_excel(uploaded_file)
     if suffix == "json":
         return pd.read_json(uploaded_file)
-        st.session_state["dataset"] = df
     raise ValueError("Unsupported file type. Upload CSV, Excel, or JSON.")
 
 
@@ -63,10 +62,13 @@ if uploaded_file is None:
 
 try:
     dataframe = load_dataset(uploaded_file)
+
+    # Store dataset globally
+    st.session_state["dataset"] = dataframe
+
 except Exception as error:
     st.error(f"Failed to load dataset: {error}")
     st.stop()
-
 stats = dataset_statistics(dataframe)
 
 st.success("Dataset loaded successfully.")
@@ -154,11 +156,19 @@ st.divider()
 
 quality_score = compute_quality_score(stats)
 
+# Save values for other pages
+st.session_state["quality_score"] = quality_score
+st.session_state["dataset_rows"] = stats["Rows"]
+st.session_state["dataset_columns"] = stats["Columns"]
+st.session_state["missing_values"] = stats["Missing Values"]
+st.session_state["duplicate_rows"] = stats["Duplicate Rows"]
+
 st.subheader("Dataset Quality Score")
 
 st.progress(quality_score / 100)
 
 st.metric("Quality Score", f"{quality_score}%")
+st.session_state["audit_complete"] = True
 
 if quality_score >= 90:
     st.success("Excellent dataset quality.")
