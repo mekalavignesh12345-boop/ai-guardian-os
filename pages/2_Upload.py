@@ -30,6 +30,7 @@ def load_dataset(uploaded_file):
         return pd.read_excel(uploaded_file)
     if suffix == "json":
         return pd.read_json(uploaded_file)
+        st.session_state["dataset"] = df
     raise ValueError("Unsupported file type. Upload CSV, Excel, or JSON.")
 
 
