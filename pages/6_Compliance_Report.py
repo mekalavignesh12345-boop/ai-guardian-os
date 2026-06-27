@@ -195,6 +195,9 @@ overall = round(
     2
 
 )
+# Save Compliance Results
+st.session_state["compliance_score"] = overall
+st.session_state["risk_level"] = risk_level if "risk_level" in locals() else "LOW"
 
 c1.metric(
 
@@ -268,6 +271,7 @@ highlights areas requiring improvement.
 """
 
 st.info(summary)
+st.success("✅ Compliance analysis completed.")
 
 st.divider()
 
@@ -554,6 +558,13 @@ else:
     )
 
 st.divider()
+st.session_state["deployment_status"] = (
+    "Approved"
+    if overall >= 90
+    else "Conditional"
+    if overall >= 75
+    else "Rejected"
+)
 # -----------------------------------------------------
 # Generate PDF Report
 # -----------------------------------------------------
@@ -1004,3 +1015,27 @@ The generated PDF and Excel reports are now available for governance, auditing, 
 """
 
 )
+st.divider()
+
+st.subheader("Responsible AI Compliance Status")
+
+c1, c2 = st.columns(2)
+
+c1.metric(
+    "Compliance Score",
+    f"{overall}%"
+)
+
+c2.metric(
+    "Risk Level",
+    risk_level
+)
+
+if overall >= 90:
+    st.success("🟢 AI System Approved")
+
+elif overall >= 75:
+    st.warning("🟡 AI System Requires Minor Improvements")
+
+else:
+    st.error("🔴 AI System Not Approved")
