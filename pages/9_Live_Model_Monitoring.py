@@ -1,9 +1,9 @@
+import io
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-from database.database import get_connection
 from database.logger import log
 
 # ----------------------------------------------------
@@ -31,61 +31,36 @@ st.caption(
 st.divider()
 
 # ----------------------------------------------------
-# Database
+# Load Model From Session
 # ----------------------------------------------------
 
-conn = get_connection()
+if "model_name" not in st.session_state:
 
-cursor = conn.cursor()
-
-cursor.execute("""
-
-SELECT
-
-m.id,
-
-p.name,
-
-m.model_name,
-
-m.version,
-
-m.framework,
-
-m.accuracy,
-
-m.fairness,
-
-m.privacy,
-
-m.explainability,
-
-m.compliance
-
-FROM models m
-
-JOIN projects p
-
-ON p.id = m.project_id
-
-ORDER BY m.uploaded_at DESC
-
-""")
-
-rows = cursor.fetchall()
-
-if len(rows) == 0:
-
-    st.warning(
-
-        "No registered models found."
-
-    )
-
-    conn.close()
+    st.error("❌ Please register a model first.")
 
     st.stop()
 
+models_df = pd.DataFrame([{
+
+    "Project": st.session_state.get("project_name", "Current Project"),
+
+    "Model": st.session_state.get("model_name", "Unknown Model"),
+
+    "Version": st.session_state.get("model_version", "1.0"),
+
+    "Framework": st.session_state.get("model_framework", "Scikit-Learn"),
+
+    "Accuracy": st.session_state.get("model_accuracy", 0),
+
+    "Fairness": st.session_state.get("fairness_score", 0),
+
+    "Privacy": st.session_state.get("privacy_score", 0),
+
+    "Explainability": st.session_state.get("explainability_score", 0),
+
+    "Compliance": st.session_state.get("compliance_score", 0)
+
+}])
 models_df = pd.DataFrame(
 
     rows,
