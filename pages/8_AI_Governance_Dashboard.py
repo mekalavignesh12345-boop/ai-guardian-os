@@ -51,46 +51,13 @@ avg_explainability = st.session_state.get("explainability_score", 0)
 
 st.header("Organization Overview")
 
-projects_count = len(projects_df)
+projects_count = 1
+models_count = 1
+certificates_count = 1
 
-models_count = len(models_df)
-
-certificates_count = len(certificates_df)
-
-if not models_df.empty:
-
-    avg_fairness = round(
-
-        models_df["fairness"].fillna(0).mean(),
-
-        2
-
-    )
-
-    avg_privacy = round(
-
-        models_df["privacy"].fillna(0).mean(),
-
-        2
-
-    )
-
-    avg_explainability = round(
-
-        models_df["explainability"].fillna(0).mean(),
-
-        2
-
-    )
-
-else:
-
-    avg_fairness = 0
-
-    avg_privacy = 0
-
-    avg_explainability = 0
-
+avg_fairness = st.session_state.get("fairness_score", 0)
+avg_privacy = st.session_state.get("privacy_score", 0)
+avg_explainability = st.session_state.get("explainability_score", 0)
 overall_score = round(
     
 
