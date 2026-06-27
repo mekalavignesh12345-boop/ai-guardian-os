@@ -33,109 +33,17 @@ st.divider()
 # Database Connection
 # -----------------------------------------------------
 
-conn = get_connection()
+if "dataset" not in st.session_state:
+    st.error("Please upload a dataset first.")
+    st.stop()
 
-cursor = conn.cursor()
+projects_count = 1
+models_count = 1
+certificates_count = 1
 
-# -----------------------------------------------------
-# Load Projects
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM projects
-
-ORDER BY created_at DESC
-
-""")
-
-projects = cursor.fetchall()
-
-projects_df = pd.DataFrame(
-
-    projects,
-
-    columns=projects[0].keys()
-
-) if projects else pd.DataFrame()
-
-# -----------------------------------------------------
-# Load Models
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM models
-
-ORDER BY uploaded_at DESC
-
-""")
-
-models = cursor.fetchall()
-
-models_df = pd.DataFrame(
-
-    models,
-
-    columns=models[0].keys()
-
-) if models else pd.DataFrame()
-
-# -----------------------------------------------------
-# Load Certificates
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM certificates
-
-ORDER BY issued_at DESC
-
-""")
-
-certificates = cursor.fetchall()
-
-certificates_df = pd.DataFrame(
-
-    certificates,
-
-    columns=certificates[0].keys()
-
-) if certificates else pd.DataFrame()
-
-# -----------------------------------------------------
-# Load Audit Logs
-# -----------------------------------------------------
-
-cursor.execute("""
-
-SELECT *
-
-FROM audit_logs
-
-ORDER BY created_at DESC
-
-LIMIT 20
-
-""")
-
-logs = cursor.fetchall()
-
-logs_df = pd.DataFrame(
-
-    logs,
-
-    columns=logs[0].keys()
-
-) if logs else pd.DataFrame()
-
-conn.close()
+avg_fairness = st.session_state.get("fairness_score", 0)
+avg_privacy = st.session_state.get("privacy_score", 0)
+avg_explainability = st.session_state.get("explainability_score", 0)
 
 # -----------------------------------------------------
 # KPI Cards
@@ -184,6 +92,7 @@ else:
     avg_explainability = 0
 
 overall_score = round(
+    
 
     (
 
@@ -198,6 +107,7 @@ overall_score = round(
     2
 
 )
+st.session_state["governance_score"] = overall_score
 
 k1, k2, k3, k4 = st.columns(4)
 
@@ -634,6 +544,7 @@ st.metric(
 )
 
 st.divider()
+st.session_state["governance_status"] = status
 
 # -----------------------------------------------------
 # Governance Recommendations
@@ -690,6 +601,7 @@ else:
     )
 
 st.divider()
+st.session_state["governance_recommendations"] = len(recommendations)
 
 # -----------------------------------------------------
 # Search Projects
