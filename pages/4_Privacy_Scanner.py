@@ -34,35 +34,31 @@ st.divider()
 # Load Dataset
 # -----------------------------------------------------
 
-from pathlib import Path
-
 df = None
 
-# 1. Use dataset already stored in session_state
+# First check session_state
 if "dataset" in st.session_state:
     df = st.session_state["dataset"]
-    st.success("✅ Dataset loaded from session.")
+    st.success("✅ Dataset loaded from current session.")
 
-# 2. Otherwise load from uploads folder
 else:
+    UPLOAD_DIR = Path("uploads")
 
-    upload_dir = Path("uploads")
+    if UPLOAD_DIR.exists():
 
-    if upload_dir.exists():
+        files = sorted(UPLOAD_DIR.glob("*"))
 
-        files = sorted(upload_dir.glob("*"))
-
-        if len(files) > 0:
+        if files:
 
             selected = st.selectbox(
-                "Select Dataset",
+                "Dataset",
                 files,
                 format_func=lambda x: x.name
             )
 
-            try:
+            suffix = selected.suffix.lower()
 
-                suffix = selected.suffix.lower()
+            try:
 
                 if suffix == ".csv":
                     df = pd.read_csv(selected)
@@ -74,26 +70,27 @@ else:
                     df = pd.read_json(selected)
 
                 else:
-                    st.error("Unsupported file type.")
+                    st.error("Unsupported file.")
                     st.stop()
 
                 st.session_state["dataset"] = df
 
             except Exception as e:
-                st.error(f"Error loading dataset: {e}")
+                st.error(e)
                 st.stop()
 
-# 3. No dataset available
 if df is None:
     st.warning("⚠️ Please upload a dataset or AI Project first.")
     st.stop()
 
-st.success("✅ Dataset Loaded Successfully")
+st.success("✅ Dataset Loaded")
 
 st.dataframe(
     df.head(),
     use_container_width=True
 )
+
+st.divider()
 # -----------------------------------------------------
 # Initialize Presidio
 # -----------------------------------------------------
